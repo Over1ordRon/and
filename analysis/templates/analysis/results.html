@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results - Statistical Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #f5f7fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .table-container {
+            max-height: 600px;
+            overflow: auto;
+            border-radius: 10px;
+        }
+        .table {
+            font-size: 0.9rem;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background: #667eea;
+            color: white;
+            z-index: 10;
+        }
+        .btn-graph {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+        }
+        .graph-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        #graphImage {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .loading-spinner.active {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-graph-up me-2"></i>Analysis Results
+            </span>
+            <div>
+                <a href="{% url 'dashboard' %}" class="btn btn-light btn-sm me-2">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                </a>
+                <a href="{% url 'clear_session' %}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i>New Analysis
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <div class="row g-4">
+            <!-- Results Card -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">
+                            <i class="bi bi-table me-2"></i>{{ title }}
+                        </h4>
+                        
+                        {% if selected_columns %}
+                            <p class="text-muted mb-3">
+                                <strong>Selected Columns:</strong> {{ selected_columns|join:", " }}
+                            </p>
+                        {% endif %}
+
+                        <div class="table-container">
+                            {{ table|safe }}
+                        </div>
+
+                        {% if numeric_table %}
+                            <hr class="my-4">
+                            <h5>Numeric Values</h5>
+                            <div class="table-container">
+                                {{ numeric_table|safe }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph Configuration Card -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">
+                            <i class="bi bi-bar-chart-line me-2"></i>Generate Graph
+                        </h5>
+
+                        <form id="graphForm">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Graph Type</label>
+                                <select name="graph_type" class="form-select" required>
+                                    <option value="heatmap" selected>Heatmap</option>
+                                    <option value="bar">Bar Chart</option>
+                                    <option value="line">Line Plot</option>
+                                    <option value="scatter">Scatter Plot</option>
+                                    <option value="box">Box Plot</option>
+                                    <option value="histogram">Histogram</option>
+                                    <option value="pie">Pie Chart</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Title</label>
+                                <input type="text" name="title" class="form-control" 
+                                       placeholder="Graph title" value="{{ title }}">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">X-axis Label</label>
+                                <input type="text" name="xlabel" class="form-control" 
+                                       placeholder="X-axis label">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Y-axis Label</label>
+                                <input type="text" name="ylabel" class="form-control" 
+                                       placeholder="Y-axis label">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Color Map (Heatmap)</label>
+                                <select name="colormap" class="form-select">
+                                    <option value="viridis">Viridis</option>
+                                    <option value="plasma">Plasma</option>
+                                    <option value="inferno">Inferno</option>
+                                    <option value="magma">Magma</option>
+                                    <option value="coolwarm">Coolwarm</option>
+                                    <option value="RdYlBu">Red-Yellow-Blue</option>
+                                </select>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">Width</label>
+                                    <input type="number" name="figsize_width" class="form-control" 
+                                           value="10" min="4" max="20">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">Height</label>
+                                    <input type="number" name="figsize_height" class="form-control" 
+                                           value="8" min="4" max="20">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-graph w-100">
+                                <span class="spinner-border spinner-border-sm loading-spinner me-2"></span>
+                                <i class="bi bi-image me-2"></i>
+                                Generate Graph
+                            </button>
+                        </form>
+
+                        <div id="errorMessage" class="alert alert-danger mt-3 d-none"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Display Section -->
+        <div class="row mt-4" id="graphSection" style="display: none;">
+            <div class="col-12">
+                <div class="graph-container text-center">
+                    <h4 class="mb-4"><i class="bi bi-graph-up me-2"></i>Generated Graph</h4>
+                    <img id="graphImage" src="" alt="Generated Graph">
+                    <div class="mt-3">
+                        <button class="btn btn-outline-primary" onclick="downloadGraph()">
+                            <i class="bi bi-download me-2"></i>Download Graph
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const graphForm = document.getElementById('graphForm');
+        const graphSection = document.getElementById('graphSection');
+        const graphImage = document.getElementById('graphImage');
+        const errorMessage = document.getElementById('errorMessage');
+        const spinner = document.querySelector('.loading-spinner');
+
+        graphForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Show loading state
+            spinner.classList.add('active');
+            errorMessage.classList.add('d-none');
+            
+            const formData = new FormData(graphForm);
+            
+            try {
+                const response = await fetch("{% url 'generate_graph' %}", {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    graphImage.src = data.image;
+                    graphSection.style.display = 'block';
+                    graphSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    errorMessage.textContent = data.error || 'Failed to generate graph';
+                    errorMessage.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Network error: ' + error.message;
+                errorMessage.classList.remove('d-none');
+            } finally {
+                spinner.classList.remove('active');
+            }
+        });
+
+        function downloadGraph() {
+            const link = document.createElement('a');
+            link.href = graphImage.src;
+            link.download = 'analysis_graph.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
