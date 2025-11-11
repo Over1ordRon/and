@@ -1,184 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Statistical Analysis</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: #f5f7fa;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        .analysis-card {
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-        .analysis-card.selected {
-            border-color: #667eea;
-            background: #f8f9ff;
-        }
-        .column-checkbox {
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
-        .column-checkbox:hover {
-            background: #f8f9ff;
-        }
-        .btn-analyze {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 0.8rem 2rem;
-            font-weight: 600;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Statistical Analysis</title>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: "Inter", system-ui, sans-serif;
+    }
+
+    .navbar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 0.75rem 1rem;
+    }
+
+    .navbar .navbar-brand {
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .analysis-card {
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .analysis-card.selected {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+
+    .column-checkbox {
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .column-checkbox:hover {
+      background: #f1f3ff;
+    }
+
+    .btn-analyze {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      padding: 0.8rem 2rem;
+      font-weight: 600;
+      color: white;
+      transition: background 0.2s;
+    }
+
+    .btn-analyze:hover {
+      background: linear-gradient(135deg, #5b6ee0 0%, #6b43a0 100%);
+    }
+
+    /* Sticky config card for better UX */
+    @media (min-width: 992px) {
+      .sticky-card {
+        position: sticky;
+        top: 1rem;
+      }
+    }
+
+    .table-preview {
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      background: #6c757d;
+    }
+  </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">
-                <i class="bi bi-graph-up me-2"></i>Statistical Analysis Dashboard
-            </span>
-            <a href="{% url 'clear_session' %}" class="btn btn-light btn-sm">
-                <i class="bi bi-arrow-clockwise me-1"></i>New Analysis
-            </a>
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark mb-4">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">
+        <i class="bi bi-graph-up me-2"></i>Statistical Analysis Dashboard
+      </span>
+      <a href="{% url 'clear_session' %}" class="btn btn-light btn-sm">
+        <i class="bi bi-arrow-clockwise me-1"></i>New Analysis
+      </a>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4">
+    <!-- Alerts -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    </nav>
+      {% endfor %}
+    {% endif %}
 
-    <div class="container-fluid px-4">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        <div class="row g-4 mb-4">
-            <!-- Data Info Card -->
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-info-circle me-2"></i>Data Information</h5>
-                        <ul class="list-unstyled mb-0">
-                            <li><strong>Rows:</strong> {{ shape.0 }}</li>
-                            <li><strong>Columns:</strong> {{ shape.1 }}</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Stats Card -->
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-bar-chart me-2"></i>Column Types</h5>
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for col, dtype in dtypes.items %}
-                                <span class="badge bg-secondary">{{ col }}: {{ dtype }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Info Cards -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-info-circle me-2 text-primary"></i>Data Information</h5>
+            <ul class="list-unstyled mb-0">
+              <li><strong>Rows:</strong> {{ shape.0 }}</li>
+              <li><strong>Columns:</strong> {{ shape.1 }}</li>
+            </ul>
+          </div>
         </div>
+      </div>
 
-        <!-- Analysis Form -->
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4"><i class="bi bi-table me-2"></i>Data Preview</h5>
-                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            {{ data_preview|safe }}
-                        </div>
-                    </div>
-                </div>
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-bar-chart me-2 text-success"></i>Column Types</h5>
+            <div class="d-flex flex-wrap gap-2">
+              {% for col, dtype in dtypes.items %}
+                <span class="badge bg-secondary">{{ col }}: {{ dtype }}</span>
+              {% endfor %}
             </div>
-
-            <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4"><i class="bi bi-gear me-2"></i>Analysis Configuration</h5>
-                        
-                        <form method="post" action="{% url 'analyze_data' %}" id="analysisForm">
-                            {% csrf_token %}
-                            
-                            <!-- Column Selection -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Select Columns</label>
-                                <div id="columnsList">
-                                    {% for column in columns %}
-                                        <div class="form-check column-checkbox">
-                                            <input class="form-check-input" type="checkbox" name="columns" 
-                                                   value="{{ column }}" id="col_{{ forloop.counter }}">
-                                            <label class="form-check-label" for="col_{{ forloop.counter }}">
-                                                {{ column }}
-                                            </label>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-
-                            <!-- Analysis Type Selection -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Analysis Type</label>
-                                <select name="analysis_type" class="form-select" required>
-                                    <option value="">Choose analysis...</option>
-                                    <option value="contingency">Contingency Table</option>
-                                    <option value="burt">Burt Matrix</option>
-                                    <option value="distance">Distance Matrix</option>
-                                    <option value="dissimilarity">Dissimilarity Matrix</option>
-                                    <option value="row_profiles">Row Profiles</option>
-                                    <option value="col_profiles">Column Profiles</option>
-                                    <option value="chi2_rows">Chi-Square Distance (Rows)</option>
-                                    <option value="chi2_cols">Chi-Square Distance (Columns)</option>
-                                </select>
-                                <small class="text-muted">Some analyses require 2+ columns</small>
-                            </div>
-
-                            <button type="submit" class="btn btn-analyze w-100">
-                                <i class="bi bi-play-circle me-2"></i>Run Analysis
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
+      </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Add 'Select All' functionality
-        const columnsList = document.getElementById('columnsList');
-        const selectAllBtn = document.createElement('button');
-        selectAllBtn.type = 'button';
-        selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-2 w-100';
-        selectAllBtn.innerHTML = '<i class="bi bi-check-all me-1"></i>Select All';
-        selectAllBtn.onclick = () => {
-            const checkboxes = columnsList.querySelectorAll('input[type="checkbox"]');
-            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-            checkboxes.forEach(cb => cb.checked = !allChecked);
-            selectAllBtn.innerHTML = allChecked ? 
-                '<i class="bi bi-check-all me-1"></i>Select All' : 
-                '<i class="bi bi-x me-1"></i>Deselect All';
-        };
-        columnsList.insertBefore(selectAllBtn, columnsList.firstChild);
-    </script>
+    <!-- Data + Config -->
+    <div class="row g-4">
+      <!-- Data Preview -->
+      <div class="col-lg-8">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-4"><i class="bi bi-table me-2 text-info"></i>Data Preview</h5>
+            <div class="table-responsive table-preview" style="max-height: 420px; overflow-y: auto;">
+              {{ data_preview|safe }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config -->
+      <div class="col-lg-4">
+        <div class="card sticky-card">
+          <div class="card-body">
+            <h5 class="card-title mb-4"><i class="bi bi-gear me-2 text-warning"></i>Analysis Configuration</h5>
+
+            <form method="post" action="{% url 'analyze_data' %}" id="analysisForm">
+              {% csrf_token %}
+
+              <!-- Column Selection -->
+              <div class="mb-4">
+                <label class="form-label fw-bold">Select Columns</label>
+                <div id="columnsList" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                  {% for column in columns %}
+                    <div class="form-check column-checkbox">
+                      <input class="form-check-input" type="checkbox" name="columns" 
+                            value="{{ column }}" id="col_{{ forloop.counter }}">
+                      <label class="form-check-label" for="col_{{ forloop.counter }}">
+                        {{ column }}
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Analysis Type -->
+              <div class="mb-4">
+                <label class="form-label fw-bold">Analysis Type</label>
+                <select name="analysis_type" class="form-select" required>
+                  <option value="">Choose analysis...</option>
+                  <option value="contingency">Contingency Table</option>
+                  <option value="burt">Burt Matrix</option>
+                  <option value="distance">Distance Matrix</option>
+                  <option value="dissimilarity">Dissimilarity Matrix</option>
+                  <option value="row_profiles">Row Profiles</option>
+                  <option value="col_profiles">Column Profiles</option>
+                  <option value="chi2_rows">Chi-Square Distance (Rows)</option>
+                  <option value="chi2_cols">Chi-Square Distance (Columns)</option>
+                </select>
+                <small class="text-muted">Some analyses require 2+ columns.</small>
+              </div>
+
+              <button type="submit" class="btn btn-analyze w-100 mt-3">
+                <i class="bi bi-play-circle me-2"></i>Run Analysis
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Select All Script -->
+  <script>
+    const columnsList = document.getElementById('columnsList');
+    const selectAllBtn = document.createElement('button');
+    selectAllBtn.type = 'button';
+    selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-2 w-100';
+    selectAllBtn.innerHTML = '<i class="bi bi-check-all me-1"></i>Select All';
+    selectAllBtn.onclick = () => {
+      const checkboxes = columnsList.querySelectorAll('input[type="checkbox"]');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => cb.checked = !allChecked);
+      selectAllBtn.innerHTML = allChecked
+        ? '<i class="bi bi-check-all me-1"></i>Select All'
+        : '<i class="bi bi-x-lg me-1"></i>Deselect All';
+    };
+    columnsList.insertBefore(selectAllBtn, columnsList.firstChild);
+  </script>
 </body>
 </html>
