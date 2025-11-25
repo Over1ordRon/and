@@ -188,6 +188,7 @@ class DataAnalysisBackend:
         frac_df = pd.DataFrame(frac_tab, index=individuals, columns=individuals)
         return dist_df, frac_df
     
+    
     def compute_dissimilarity_matrix(self, X_mat, individuals):
         """
         Compute dissimilarity matrix: s(I,J) = (a+d)/(a+b+c+d)

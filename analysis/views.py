@@ -1,5 +1,4 @@
 # analysis/views.py
-# Optimized version that works with your existing backend.py
 
 import pandas as pd
 import numpy as np
@@ -597,9 +596,11 @@ def generate_graph(request):
             df_numeric = df.apply(pd.to_numeric, errors='coerce').fillna(0)
             
             # Limit bars for readability
+            """
             if len(df_numeric) > 50:
                 df_numeric = df_numeric.iloc[:50]
                 xlabel = f'{xlabel} (first 50 shown)'
+                """
             
             if len(df_numeric.shape) == 2 and df_numeric.shape[1] < 10:
                 df_numeric.plot(kind='bar', ax=ax)
@@ -637,11 +638,20 @@ def generate_graph(request):
             
         elif graph_type == 'histogram':
             df_numeric = df.apply(pd.to_numeric, errors='coerce').fillna(0)
-            df_numeric.plot(kind='hist', alpha=0.7, bins=20, ax=ax)
+
+            for column in df_numeric.columns:
+                ax.hist(
+            df_numeric[column].dropna(),
+            bins=20,
+            alpha=0.5,
+            label=column
+        )
             ax.set_title(title, fontsize=14, fontweight='bold')
             ax.set_xlabel(xlabel if xlabel else 'Values')
             ax.set_ylabel(ylabel if ylabel else 'Frequency')
             ax.legend(loc='best', fontsize=8)
+        
+
             
         elif graph_type == 'pie':
             df_numeric = df.iloc[:, 0].apply(pd.to_numeric, errors='coerce').fillna(0)
