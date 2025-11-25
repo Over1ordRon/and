@@ -112,6 +112,8 @@ def upload_file(request):
                 else:
                     df = pd.read_excel(file_path)
                 
+                
+
                 # Check file size and warn user
                 if len(df) > 100000:
                     messages.warning(
@@ -120,6 +122,7 @@ def upload_file(request):
                         'Some operations may take longer. Consider filtering data.'
                     )
                 
+
                 # Store using efficient pickle method in cache
                 store_dataframe_efficiently(df, uploaded_file.id)
                 
@@ -223,11 +226,106 @@ def analyze_data(request):
         df_subset = df[selected_columns].sample(n=10000, random_state=42)
     else:
         df_subset = df[selected_columns]
+    # Record size before drop and drop rows with NaN values
+    pre_drop_rows = len(df_subset)
+    pre_drop_cols = len(df_subset.columns)
+    df_subset = df_subset.dropna(axis=0)
+    cleaned_subset_rows = len(df_subset)
+    dropped_rows = pre_drop_rows - cleaned_subset_rows
+    cleaned_subset_cols = len(df_subset.columns)
     
+    # Compute general statistics after drop
+    stats = {
+        'original_rows': pre_drop_rows,
+        'cleaned_rows': cleaned_subset_rows,
+        'dropped_rows': dropped_rows,
+        'total_columns': cleaned_subset_cols,
+        'rows_deleted_pct': round((dropped_rows / pre_drop_rows * 100), 2) if pre_drop_rows > 0 else 0,
+    }
+    
+    # Add per-column statistics
+    col_stats = []
+    for col in df_subset.columns:
+        col_data = df_subset[col]
+        col_info = {
+            'name': col,
+            'dtype': str(col_data.dtype),
+            'non_null': col_data.notna().sum(),
+            'null': col_data.isna().sum(),
+            'unique': col_data.nunique(),
+        }
+        # Add numeric stats if applicable
+        if pd.api.types.is_numeric_dtype(col_data):
+            col_info['mean'] = round(col_data.mean(), 4)
+            col_info['median'] = round(col_data.median(), 4)
+            col_info['mode'] = round(col_data.mode()[0], 4) if len(col_data.mode()) > 0 else 'N/A'
+            col_info['std'] = round(col_data.std(), 4)
+            col_info['var'] = round(col_data.var(), 4)
+            col_info['min'] = round(col_data.min(), 4)
+            col_info['q1'] = round(col_data.quantile(0.25), 4)
+            col_info['q3'] = round(col_data.quantile(0.75), 4)
+            col_info['max'] = round(col_data.max(), 4)
+            col_info['iqr'] = round(col_data.quantile(0.75) - col_data.quantile(0.25), 4)
+            col_info['skewness'] = round(col_data.skew(), 4)
+            col_info['kurtosis'] = round(col_data.kurtosis(), 4)
+        else:
+            # For categorical columns, show mode
+            mode_val = col_data.mode()
+            col_info['mode'] = mode_val[0] if len(mode_val) > 0 else 'N/A'
+        col_stats.append(col_info)
+    stats['columns'] = col_stats
+    
+    # Prepare a limited HTML preview for display
+    _clean_preview, _was_limited = limit_dataframe_for_display(df_subset, max_size=100, force_full=False)
+    cleaned_subset_html = _clean_preview.to_html(
+        classes='table table-striped table-hover table-sm',
+        border=0,
+        index=True
+    )
+    
+    # Ordinal configuration only for distance/dissimilarity analyses
+    if analysis_type in ('distance', 'dissimilarity'):
+        # Build uniques map for ordinal configuration
+        uniques_map = {}
+        for col in selected_columns:
+            vals = df_subset[col].dropna().astype(str)
+            freq = vals.value_counts()
+            max_uniques = 200
+            if len(freq) > max_uniques:
+                messages.warning(request, f'Column "{col}" has {len(freq)} categories. Showing top {max_uniques} by frequency.')
+                freq = freq.head(max_uniques)
+            uniques_map[col] = list(freq.index)
+
+        # If ordinal step not confirmed, render ordinal configuration page
+        if request.POST.get('ordinal_confirmed') != 'true':
+            uniques_items = [(col, uniques_map.get(col, [])) for col in selected_columns]
+            return render(request, 'analysis/ordinal.html', {
+                'selected_columns': selected_columns,
+                'analysis_type': analysis_type,
+                'force_full_matrix': force_full_matrix,
+                'uniques_items': uniques_items,
+                'stats': stats,
+            })
+
+        # Apply user-provided ordinal ordering
+        for col in selected_columns:
+            if request.POST.get(f'is_ordinal_{col}') == 'yes':
+                raw = request.POST.get(f'order_{col}', '')
+                order_list = [line.strip() for line in raw.splitlines() if line.strip()]
+                existing = set(df_subset[col].astype(str).unique())
+                order_list = [v for v in order_list if v in existing]
+                if order_list:
+                    df_subset[col] = pd.Categorical(df_subset[col].astype(str), categories=order_list, ordered=True)
+
     # Initialize backend with your existing DataAnalysisBackend
     backend = DataAnalysisBackend(df_subset.to_dict('list'))
     
     results = {}
+    # Include cleaned subset preview, counts, and statistics in results for optional display
+    results['cleaned_subset_html'] = cleaned_subset_html
+    results['cleaned_subset_rows'] = cleaned_subset_rows
+    results['dropped_rows'] = dropped_rows
+    results['stats'] = stats
     result_df = None
     
     try:

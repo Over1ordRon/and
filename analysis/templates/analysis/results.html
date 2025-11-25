@@ -96,6 +96,119 @@
                             {{ table|safe }}
                         </div>
 
+                        <div class="mt-4">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#statsCollapse" aria-expanded="false" aria-controls="statsCollapse">
+                                <i class="bi bi-graph-up me-1"></i>Show Data Statistics
+                            </button>
+                        </div>
+                        <div class="collapse mt-3" id="statsCollapse">
+                            <div class="card card-body">
+                                <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-1"></i>Data Summary & Column Statistics</h6>
+                                
+                                <!-- Data Summary -->
+                                <div class="mb-4" style="background: #f0f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                    <h6 class="fw-bold mb-2">Summary After Cleaning</h6>
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <small class="text-muted">Original Rows</small>
+                                            <p class="fw-bold">{{ stats.original_rows }}</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">Cleaned Rows</small>
+                                            <p class="fw-bold text-success">{{ stats.cleaned_rows }}</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">Rows Deleted</small>
+                                            <p class="fw-bold text-danger">{{ stats.dropped_rows }} ({{ stats.rows_deleted_pct }}%)</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">Total Columns</small>
+                                            <p class="fw-bold">{{ stats.total_columns }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Column Statistics Table -->
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-light" style="position: sticky; top: 0;">
+                                            <tr>
+                                                <th>Column</th>
+                                                <th>Type</th>
+                                                <th>Unique</th>
+                                                <th>Non-Null</th>
+                                                <th>Null</th>
+                                                {% if stats.columns.0.mean %}
+                                                    <th>Mean</th>
+                                                    <th>Median</th>
+                                                    <th>Mode</th>
+                                                    <th>Std Dev</th>
+                                                    <th>Var</th>
+                                                    <th>Min</th>
+                                                    <th>Q1</th>
+                                                    <th>Q3</th>
+                                                    <th>Max</th>
+                                                    <th>IQR</th>
+                                                    <th>Skewness</th>
+                                                    <th>Kurtosis</th>
+                                                {% else %}
+                                                    <th>Mode</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for col in stats.columns %}
+                                            <tr>
+                                                <td><small><strong>{{ col.name }}</strong></small></td>
+                                                <td><small><span class="badge bg-secondary">{{ col.dtype }}</span></small></td>
+                                                <td><small>{{ col.unique }}</small></td>
+                                                <td><small>{{ col.non_null }}</small></td>
+                                                <td><small>{{ col.null }}</small></td>
+                                                {% if col.mean %}
+                                                    <td><small>{{ col.mean }}</small></td>
+                                                    <td><small>{{ col.median }}</small></td>
+                                                    <td><small>{{ col.mode }}</small></td>
+                                                    <td><small>{{ col.std }}</small></td>
+                                                    <td><small>{{ col.var }}</small></td>
+                                                    <td><small>{{ col.min }}</small></td>
+                                                    <td><small>{{ col.q1 }}</small></td>
+                                                    <td><small>{{ col.q3 }}</small></td>
+                                                    <td><small>{{ col.max }}</small></td>
+                                                    <td><small>{{ col.iqr }}</small></td>
+                                                    <td><small>{{ col.skewness }}</small></td>
+                                                    <td><small>{{ col.kurtosis }}</small></td>
+                                                {% else %}
+                                                    <td><small>{{ col.mode }}</small></td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <strong>Legend:</strong> Q1 = 25th percentile | Q3 = 75th percentile | IQR = Interquartile Range | 
+                                        Skewness = measure of asymmetry | Kurtosis = measure of tail heaviness
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#cleanedSubsetCollapse" aria-expanded="false" aria-controls="cleanedSubsetCollapse">
+                                <i class="bi bi-eye me-1"></i>Show cleaned subset (after dropna)
+                            </button>
+                            <small class="text-muted ms-2">Kept: {{ cleaned_subset_rows }} rows | Dropped: {{ dropped_rows }} rows</small>
+                        </div>
+                        <div class="collapse mt-3" id="cleanedSubsetCollapse">
+                            <div class="card card-body">
+                                <h6 class="fw-bold mb-2"><i class="bi bi-check-circle me-1"></i>Cleaned Subset Preview</h6>
+                                <div class="table-container">
+                                    {{ cleaned_subset_html|safe }}
+                                </div>
+                            </div>
+                        </div>
+
                         {% if numeric_table %}
                             <hr class="my-4">
                             <h5>Numeric Values</h5>
